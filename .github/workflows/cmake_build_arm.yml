@@ -1,0 +1,90 @@
+name: cmake_build_arm.yml
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-debug:
+    strategy:
+      matrix:
+        gcc: [ 'latest' ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GNU Arm Embedded Toolchain - ${{ matrix.gcc }}
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: ${{ matrix.gcc }}
+
+      - name: Check Tools
+        run: |
+          arm-none-eabi-gcc --version
+
+      - name: Set environment variables
+        run: |
+          echo "export CC=arm-none-eabi-gcc" >> $GITHUB_ENV
+          echo "export CXX=arm-none-eabi-g++" >> $GITHUB_ENV
+          echo "export AR=arm-none-eabi-ar" >> $GITHUB_ENV
+          echo "export OBJDUMP=arm-none-eabi-objdump" >> $GITHUB_ENV
+
+      - name: Configure & Build Debug
+        run: |
+          mkdir build-debug && cd build-debug
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake --build .
+
+
+      - name: Upload Debug Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: general-aviation-rudder-build-debug
+          path: |
+            build-debug/*.elf
+            build-debug/*.bin
+            build-debug/*.hex
+            build-debug/*.map
+
+  build-release:
+    strategy:
+      matrix:
+        gcc: [ 'latest' ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GNU Arm Embedded Toolchain - ${{ matrix.gcc }}
+        uses: carlosperate/arm-none-eabi-gcc-action@v1
+        with:
+          release: ${{ matrix.gcc }}
+
+      - name: Check Tools
+        run: |
+          arm-none-eabi-gcc --version
+
+      - name: Set environment variables
+        run: |
+          echo "export CC=arm-none-eabi-gcc" >> $GITHUB_ENV
+          echo "export CXX=arm-none-eabi-g++" >> $GITHUB_ENV
+          echo "export AR=arm-none-eabi-ar" >> $GITHUB_ENV
+          echo "export OBJDUMP=arm-none-eabi-objdump" >> $GITHUB_ENV
+
+      - name: Configure & Build Release
+        run: |
+          mkdir build-release && cd build-release
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build .
+
+      - name: Upload Release Assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: general-aviation-rudder-build-release
+          path: |
+            build-release/*.elf
+            build-release/*.bin
+            build-release/*.hex
+            build-release/*.map
+
