@@ -59,7 +59,7 @@ osThreadId HidCommandTaskHandle;
 uint32_t HidCommandBuffer[ 128 ];
 osStaticThreadDef_t HidCommandControlBlock;
 osThreadId HidReportTaskHandle;
-uint32_t HidReportTaskBuffer[ 64 ];
+uint32_t HidReportTaskBuffer[ 128 ];
 osStaticThreadDef_t HidReportTaskControlBlock;
 osThreadId MCP3208ReaderHandle;
 uint32_t ReadFromMCP3208Buffer[ 64 ];
@@ -146,6 +146,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  hid_rx_queue = xQueueCreate(2, sizeof(HidOutEvent_t));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
@@ -158,7 +159,7 @@ int main(void)
   HidCommandTaskHandle = osThreadCreate(osThread(HidCommandTask), NULL);
 
   /* definition and creation of HidReportTask */
-  osThreadStaticDef(HidReportTask, HidReport, osPriorityHigh, 0, 64, HidReportTaskBuffer, &HidReportTaskControlBlock);
+  osThreadStaticDef(HidReportTask, HidReport, osPriorityHigh, 0, 128, HidReportTaskBuffer, &HidReportTaskControlBlock);
   HidReportTaskHandle = osThreadCreate(osThread(HidReportTask), NULL);
 
   /* definition and creation of MCP3208Reader */
@@ -407,6 +408,7 @@ void StartDefaultTask(void const * argument)
   /* init code for USB_DEVICE */
   MX_USB_DEVICE_Init();
   /* USER CODE BEGIN 5 */
+  UNUSED(argument);
   /* Infinite loop */
   for(;;)
   {
@@ -419,7 +421,6 @@ void StartDefaultTask(void const * argument)
       HAL_GPIO_TogglePin(USER_LED_GPIO_Port, USER_LED_Pin);
       osDelay(pdMS_TO_TICKS(50));
     }
-    osDelay(1);
   }
   /* USER CODE END 5 */
 }
@@ -510,6 +511,7 @@ void HidCommand(void const * argument)
 void HidReport(void const * argument)
 {
   /* USER CODE BEGIN HidReport */
+  report14.report_id = 0x14;
   /* Infinite loop */
   for(;;)
   {
@@ -559,9 +561,29 @@ void ReadFromMCP3208(void const * argument)
 {
   /* USER CODE BEGIN ReadFromMCP3208 */
   /* Infinite loop */
+  uint16_t s, fs;
   for(;;)
   {
-    osDelay(1000);
+      s = MCP3208_ReadChannel(&mcp3208, 0);
+      fs = SlipAvgFilterGetAvgWithInput(&slipAvgFilter_Ch[0], s);
+      UNUSED(fs);
+      vTaskDelay(pdMS_TO_TICKS(4));
+      s = MCP3208_ReadChannel(&mcp3208, 4);
+      fs = SlipAvgFilterGetAvgWithInput(&slipAvgFilter_Ch[4], s);
+      UNUSED(fs);
+      vTaskDelay(pdMS_TO_TICKS(4));
+      s = MCP3208_ReadChannel(&mcp3208, 5);
+      fs = SlipAvgFilterGetAvgWithInput(&slipAvgFilter_Ch[5], s);
+      UNUSED(fs);
+      vTaskDelay(pdMS_TO_TICKS(4));
+      s = MCP3208_ReadChannel(&mcp3208, 6);
+      fs = SlipAvgFilterGetAvgWithInput(&slipAvgFilter_Ch[6], s);
+      UNUSED(fs);
+      vTaskDelay(pdMS_TO_TICKS(4));
+      s = MCP3208_ReadChannel(&mcp3208, 7);
+      fs = SlipAvgFilterGetAvgWithInput(&slipAvgFilter_Ch[7], s);
+      UNUSED(fs);
+      vTaskDelay(pdMS_TO_TICKS(4));
   }
   /* USER CODE END ReadFromMCP3208 */
 }
@@ -584,27 +606,43 @@ void ReadClib(void const * argument)
   /* Infinite loop */
   int at24_read_timeout = 64;
   uint8_t buf[2];
-  read_clib_job_type read_clib_jobs[10] = {
-    {RUDDER_INPUT_MIN_OFFSET_ADDR, &rudder_input_min_clib},
-    {RUDDER_INPUT_MAX_OFFSET_ADDR, &rudder_input_max_clib},
-    {PIC_LEFT_BREAK_INPUT_MIN_OFFSET_ADDR, &pic_left_break_input_min_clib},
-    {PIC_LEFT_BREAK_INPUT_MAX_OFFSET_ADDR, &pic_left_break_input_max_clib},
-    {PIC_RIGHT_BREAK_INPUT_MIN_OFFSET_ADDR, &pic_right_break_input_min_clib},
-    {PIC_RIGHT_BREAK_INPUT_MAX_OFFSET_ADDR, &pic_right_break_input_max_clib},
-    {PF_LEFT_BREAK_INPUT_MIN_OFFSET_ADDR, &pf_left_break_input_min_clib},
-    {PF_LEFT_BREAK_INPUT_MAX_OFFSET_ADDR, &pf_left_break_input_max_clib},
-    {PF_RIGHT_BREAK_INPUT_MIN_OFFSET_ADDR, &pf_right_break_input_min_clib},
-    {PF_RIGHT_BREAK_INPUT_MAX_OFFSET_ADDR, &pf_right_break_input_max_clib},
-  };
-  for(;;)
+  while (1)
   {
-    for (uint i = 0; i < sizeof(read_clib_jobs) / sizeof(read_clib_job_type); ++i)
-    {
-      at24_read(read_clib_jobs[i].at24_address, buf, 2, at24_read_timeout);
-      if (buf[0] != 0xFF || buf[1] != 0xFF) *read_clib_jobs[i].addr = Uint8ArrayToUint16(buf, 1);
-      vTaskDelay(pdMS_TO_TICKS(200));
-    }
-    osDelay(1);
+    at24_read(RUDDER_INPUT_MIN_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) rudder_input_min_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    at24_read(RUDDER_INPUT_MAX_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) rudder_input_max_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    at24_read(PIC_LEFT_BREAK_INPUT_MIN_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pic_left_break_input_min_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    at24_read(PIC_LEFT_BREAK_INPUT_MAX_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pic_left_break_input_max_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    at24_read(PIC_RIGHT_BREAK_INPUT_MIN_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pic_right_break_input_min_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    at24_read(PIC_RIGHT_BREAK_INPUT_MAX_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pic_right_break_input_max_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    at24_read(PF_LEFT_BREAK_INPUT_MIN_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pf_left_break_input_min_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    at24_read(PF_LEFT_BREAK_INPUT_MAX_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pf_left_break_input_max_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
+    at24_read(PF_RIGHT_BREAK_INPUT_MIN_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pf_right_break_input_min_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    at24_read(PF_RIGHT_BREAK_INPUT_MAX_OFFSET_ADDR, buf, 2, at24_read_timeout);
+    if (buf[0] != 0xFF || buf[1] != 0xFF) pf_right_break_input_max_clib = Uint8ArrayToUint16(buf, 1);
+    vTaskDelay(pdMS_TO_TICKS(200));
+
   }
   /* USER CODE END ReadClib */
 }

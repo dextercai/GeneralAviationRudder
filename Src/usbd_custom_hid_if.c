@@ -21,6 +21,11 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_custom_hid_if.h"
 
+#include "global.h"
+#include "projdefs.h"
+#include "queue.h"
+#include "types.h"
+
 /* USER CODE BEGIN INCLUDE */
 
 /* USER CODE END INCLUDE */
@@ -204,6 +209,13 @@ static int8_t CUSTOM_HID_DeInit_FS(void)
 static int8_t CUSTOM_HID_OutEvent_FS(uint8_t event_idx, uint8_t state)
 {
   /* USER CODE BEGIN 6 */
+  HidOutEvent_t event;
+
+  event.event_idx = event_idx;
+  event.state = state;
+
+  BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+  xQueueSendFromISR(hid_rx_queue, &event, &xHigherPriorityTaskWoken);
   return (USBD_OK);
   /* USER CODE END 6 */
 }
