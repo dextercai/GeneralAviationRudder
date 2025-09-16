@@ -639,8 +639,9 @@ static uint8_t  USBD_CUSTOM_HID_DataOut(USBD_HandleTypeDef *pdev,
 
   USBD_CUSTOM_HID_HandleTypeDef     *hhid = (USBD_CUSTOM_HID_HandleTypeDef *)pdev->pClassData;
 
-  ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf[0],
-                                                            hhid->Report_buf[1]);
+  if(hhid->Report_buf[0] == 0x12) {
+    ((USBD_CUSTOM_HID_ItfTypeDef *)pdev->pUserData)->OutEvent(hhid->Report_buf[1], hhid->Report_buf[2]);
+  }
 
   USBD_LL_PrepareReceive(pdev, CUSTOM_HID_EPOUT_ADDR, hhid->Report_buf,
                          USBD_CUSTOMHID_OUTREPORT_BUF_SIZE);
