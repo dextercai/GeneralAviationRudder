@@ -17,16 +17,16 @@ QueueHandle_t hid_rx_queue;
 
 
 uint16_t rudder_input_min_clib = 0;
-uint16_t rudder_input_max_clib = (1 << 14) - 1;
+uint16_t rudder_input_max_clib = (1 << 12) - 1;
 
 uint16_t pic_left_break_input_min_clib = 0;
-uint16_t pic_left_break_input_max_clib = (1 << 14) - 1;
+uint16_t pic_left_break_input_max_clib = (1 << 12) - 1;
 
 uint16_t pic_right_break_input_min_clib = 0;
-uint16_t pic_right_break_input_max_clib = (1 << 14) - 1;
+uint16_t pic_right_break_input_max_clib = (1 << 12) - 1;
 
 uint16_t pf_left_break_input_min_clib = 0;
-uint16_t pf_left_break_input_max_clib = (1 << 14) - 1;
+uint16_t pf_left_break_input_max_clib = (1 << 12) - 1;
 
 uint16_t pf_right_break_input_min_clib = 0;
-uint16_t pf_right_break_input_max_clib = (1 << 14) - 1;
+uint16_t pf_right_break_input_max_clib = (1 << 12) - 1;
